@@ -109,26 +109,16 @@ func (s *PHPStore) BestVersionForDir(dir string) (*Version, string, string, erro
 		}
 	}
 
-	// .symfony.cloud.yaml for the directory of the script and up
-	if version, foundDir := s.versionForDir(dir, ".symfony.cloud.yaml"); version != nil {
-		var symfonycloud struct {
-			Type string `yaml:"type"`
-		}
-		if err := yaml.Unmarshal(version, &symfonycloud); err == nil {
-			if strings.HasPrefix(symfonycloud.Type, "php:") {
-				return s.bestVersion(symfonycloud.Type[4:], fmt.Sprintf("SymfonyCloud: %s", filepath.Join(foundDir, ".symfony.cloud.yaml")))
+	// .symfony.cloud.yaml or .platform.app.yaml for the directory of the script and up
+	for brand, file := range map[string]string{"SymfonyCloud": ".symfony.cloud.yaml", "Platform.sh": ".platform.app.yaml"} {
+		if version, foundDir := s.versionForDir(dir, file); version != nil {
+			var platform struct {
+				Type string `yaml:"type"`
 			}
-		}
-	}
-
-	// .platform.app.yaml for the directory of the script and up
-	if version, foundDir := s.versionForDir(dir, ".platform.app.yaml"); version != nil {
-		var platform struct {
-			Type string `yaml:"type"`
-		}
-		if err := yaml.Unmarshal(version, &platform); err == nil {
-			if strings.HasPrefix(platform.Type, "php:") {
-				return s.bestVersion(platform.Type[4:], fmt.Sprintf("Platform.sh: %s", filepath.Join(foundDir, ".platform.app.yaml")))
+			if err := yaml.Unmarshal(version, &platform); err == nil {
+				if strings.HasPrefix(platform.Type, "php:") {
+					return s.bestVersion(platform.Type[4:], fmt.Sprintf("%s: %s", brand, filepath.Join(foundDir, ".platform.app.yaml")))
+				}
 			}
 		}
 	}

@@ -123,6 +123,31 @@ func (s *PHPStore) BestVersionForDir(dir string) (*Version, string, string, erro
 		}
 	}
 
+	// .upsun/config.yaml from the directory of the script and up
+	if version, foundDir := s.versionForDir(dir, ".upsun/config.yaml"); version != nil {
+		var upsun struct {
+			Applications map[string]struct {
+				Type   string `yaml:"type"`
+				Source struct {
+					Root string
+				}
+			}
+		}
+		if err := yaml.Unmarshal(version, &upsun); err == nil {
+			for _, application := range upsun.Applications {
+				sourceDir := filepath.Join(foundDir, application.Source.Root)
+				if !strings.HasPrefix(dir, sourceDir) {
+					continue
+				}
+				if !strings.HasPrefix(application.Type, "php:") {
+					continue
+				}
+
+				return s.bestVersion(application.Type[4:], fmt.Sprintf("%s: %s", "Upsun", filepath.Join(foundDir, ".upsun/config.yaml")))
+			}
+		}
+	}
+
 	return s.fallbackVersion("")
 }
 
